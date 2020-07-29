@@ -1,6 +1,6 @@
 # openwrt-tl-wdr5600-v2
 
-用于编译 tplink tl-wdr5600 v2 无线路由器上的 patch 文件
+用于编译 tplink tl-wdr5600 v2 无线路由器上 openwrt 系统的 patch 文件
 
 # 用法
 
