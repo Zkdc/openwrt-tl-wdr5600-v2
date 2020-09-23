@@ -1,0 +1,29 @@
+From 377f35fadb1d1cb6d05b4fd63b432281a8dccf2f Mon Sep 17 00:00:00 2001
+From: Zkdc <zkdc2345@qq.com>
+Date: Fri, 11 Sep 2020 04:16:58 +0800
+Subject: [PATCH 2/2] ath79: drop redundant chosen/bootargs for tl-wdr5600-v2
+ See commit: b40e6bc55f ("ath79: drop and consolidate redundant
+ chosen/bootargs", 2020-06-25)
+
+---
+ target/linux/ath79/dts/qca9561_tplink_tl-wdr5600-v2.dts | 4 ----
+ 1 file changed, 4 deletions(-)
+
+diff --git a/target/linux/ath79/dts/qca9561_tplink_tl-wdr5600-v2.dts b/target/linux/ath79/dts/qca9561_tplink_tl-wdr5600-v2.dts
+index 5e82da00a9..8f94847690 100644
+--- a/target/linux/ath79/dts/qca9561_tplink_tl-wdr5600-v2.dts
++++ b/target/linux/ath79/dts/qca9561_tplink_tl-wdr5600-v2.dts
+@@ -10,10 +10,6 @@
+ 	compatible = "tplink,tl-wdr5600-v2", "qca,qca9561";
+ 	model = "TP-Link TL-WDR5600 v2";
+ 
+-	chosen {
+-		bootargs = "console=ttyS0,115200n8";
+-	};
+-
+ 	keys {
+ 		compatible = "gpio-keys";
+ 
+-- 
+2.28.0
+
