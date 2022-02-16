@@ -1,0 +1,206 @@
+From 274face0c5eca4e8e866381ca32ca6b55310b628 Mon Sep 17 00:00:00 2001
+From: Zkdc <Zkdc2345@qq.com>
+Date: Wed, 29 Jul 2020 01:05:08 +0800
+Subject: [PATCH] add tl-wdr5600-v2 support
+
+---
+ .../dts/qca9561_tplink_tl-wdr5600-v2.dts      | 117 ++++++++++++++++++
+ .../generic/base-files/etc/board.d/02_network |   3 +-
+ .../etc/hotplug.d/firmware/11-ath10k-caldata  |   4 +
+ target/linux/ath79/image/generic-tp-link.mk   |  27 ++++
+ 4 files changed, 150 insertions(+), 1 deletion(-)
+ create mode 100644 target/linux/ath79/dts/qca9561_tplink_tl-wdr5600-v2.dts
+
+diff --git a/target/linux/ath79/dts/qca9561_tplink_tl-wdr5600-v2.dts b/target/linux/ath79/dts/qca9561_tplink_tl-wdr5600-v2.dts
+new file mode 100644
+index 0000000000..a11748410b
+--- /dev/null
++++ b/target/linux/ath79/dts/qca9561_tplink_tl-wdr5600-v2.dts
+@@ -0,0 +1,117 @@
++// SPDX-License-Identifier: GPL-2.0-or-later OR MIT
++
++#include "qca956x.dtsi"
++
++#include <dt-bindings/gpio/gpio.h>
++#include <dt-bindings/input/input.h>
++
++/ {
++	compatible = "tplink,tl-wdr5600-v2", "qca,qca9561";
++	model = "TP-Link TL-WDR5600 v2";
++
++	aliases {
++		led-boot = &led_status;
++		led-failsafe = &led_status;
++		led-running = &led_status;
++		led-upgrade = &led_status;
++		label-mac-device = &eth1;
++	};
++
++	keys {
++		compatible = "gpio-keys";
++
++		reset {
++			label = "Reset button";
++			linux,code = <KEY_RESTART>;
++			gpios = <&gpio 1 GPIO_ACTIVE_LOW>;
++		};
++	};
++
++	leds {
++		compatible = "gpio-leds";
++
++		led_status: status {
++			label = "white:status";
++			gpios = <&gpio 21 GPIO_ACTIVE_LOW>;
++			default-state = "on";
++		};
++	};
++};
++
++&spi {
++	status = "okay";
++
++	flash@0 {
++		compatible = "jedec,spi-nor";
++		reg = <0>;
++		spi-max-frequency = <25000000>;
++
++		partitions {
++			compatible = "fixed-partitions";
++			#address-cells = <1>;
++			#size-cells = <1>;
++
++			partition@0 {
++				label = "factory_boot";
++				reg = <0x000000 0x01d800>;
++				read-only;
++			};
++
++			factory_info: partition@1d800 {
++				label = "factory_info";
++				reg = <0x01d800 0x000800>;
++				read-only;
++			};
++
++			art: partition@1e000 {
++				label = "art";
++				reg = <0x01e000 0x002000>;
++				read-only;
++			};
++
++			partition@20000 {
++				label = "config";
++				reg = <0x020000 0x010000>;
++				read-only;
++			};
++
++			partition@30000 {
++				label = "normal_boot";
++				reg = <0x030000 0x010000>;
++				read-only;
++			};
++			
++			partition@40000 {
++				compatible = "tplink,firmware";
++				label = "firmware";
++				reg = <0x040000 0x7c0000>;
++			};
++		};
++	};
++};
++
++&pcie {
++	status = "okay";
++};
++
++&eth0 {
++	status = "okay";
++
++	phy-handle = <&swphy4>;
++
++	mtd-mac-address = <&factory_info 0xD>;
++	mtd-mac-address-increment = <1>;
++};
++
++&eth1 {
++	status = "okay";
++
++	mtd-mac-address = <&factory_info 0xD>;
++};
++
++&wmac {
++	status = "okay";
++
++	mtd-cal-data = <&art 0x0>;
++	mtd-mac-address = <&factory_info 0xD>;
++};
+diff --git a/target/linux/ath79/generic/base-files/etc/board.d/02_network b/target/linux/ath79/generic/base-files/etc/board.d/02_network
+index c4d9d76941..3f2e71074a 100755
+--- a/target/linux/ath79/generic/base-files/etc/board.d/02_network
++++ b/target/linux/ath79/generic/base-files/etc/board.d/02_network
+@@ -188,7 +188,8 @@ ath79_setup_interfaces()
+ 	ubnt,routerstation)
+ 		ucidef_set_interfaces_lan_wan "eth1" "eth0"
+ 		;;
+-	comfast,cf-e560ac)
++	comfast,cf-e560ac|\
++	tplink,tl-wdr5600-v2)
+ 		ucidef_set_interface_wan "eth1"
+ 		ucidef_add_switch "switch0" \
+ 			"0@eth0" "1:lan" "2:lan" "3:lan" "4:lan"
+diff --git a/target/linux/ath79/generic/base-files/etc/hotplug.d/firmware/11-ath10k-caldata b/target/linux/ath79/generic/base-files/etc/hotplug.d/firmware/11-ath10k-caldata
+index 783895525b..a278597df9 100644
+--- a/target/linux/ath79/generic/base-files/etc/hotplug.d/firmware/11-ath10k-caldata
++++ b/target/linux/ath79/generic/base-files/etc/hotplug.d/firmware/11-ath10k-caldata
+@@ -151,6 +151,10 @@ case "$FIRMWARE" in
+ 		caldata_extract "art" 0x5000 0x844
+ 		ath10k_patch_mac $(macaddr_add $(cat /sys/class/net/eth0/address) -2)
+ 		;;
++	tplink,tl-wdr5600-v2)
++		caldata_extract "art" 0x1000 0x844
++		ath10k_patch_mac $(macaddr_add $(mtd_get_mac_binary factory_info 0xD) +2)
++		;;
+ 	tplink,tl-wpa8630-v1)
+ 		caldata_extract "art" 0x5000 0x844
+ 		ath10k_patch_mac $(macaddr_add $(mtd_get_mac_binary u-boot 0x0fc00) +1)
+diff --git a/target/linux/ath79/image/generic-tp-link.mk b/target/linux/ath79/image/generic-tp-link.mk
+index be6aa06b55..1e3c2fcc18 100644
+--- a/target/linux/ath79/image/generic-tp-link.mk
++++ b/target/linux/ath79/image/generic-tp-link.mk
+@@ -564,6 +564,33 @@ define Device/tplink_tl-wdr4900-v2
+ endef
+ TARGET_DEVICES += tplink_tl-wdr4900-v2
+ 
++# This device's 2nd uboot reads kernel_la,kernel_ep at 0x40018,0x4001C
++# and expects kernel at 0x40200. The other bytes in 0x40000-0x401FF does
++# not effect the 2nd uboot. Put a tplink-v1-header here could help the 
++# kernel spilt mtd partitions correctly.
++# After Putting tplink-v1-header, we should copy kernel_la,kernel_ep 
++# to 0x40018,0x4001C.
++# Now save version at 0x40020-0x4003F.
++# Of course the header's md5sum isn't correct any more, but it has no effect.
++define Build/patch-tlwdr5600v2-header
++  dd if=$@ bs=1 skip=28 count=32 | dd of=$@ bs=1 seek=32 count=32 conv=notrunc
++  dd if=$@ bs=1 skip=116 count=8 | dd of=$@ bs=1 seek=24 count=8 conv=notrunc
++endef
++
++define Device/tplink_tl-wdr5600-v2
++  $(Device/tplink-8mlzma)
++  SOC := qca9561
++  DEVICE_MODEL := TL-WDR5600
++  DEVICE_VARIANT := v2
++  TPLINK_BOARD_ID := TL-WDR5600-v2
++  DEVICE_PACKAGES := kmod-ath10k-ct-smallbuffers ath10k-firmware-qca9887-ct
++  KERNEL_INITRAMFS := kernel-bin | append-dtb | lzma | tplink-v1-header | patch-tlwdr5600v2-header
++  IMAGES := sysupgrade.bin
++  IMAGE/sysupgrade.bin := tplink-v1-image sysupgrade | patch-tlwdr5600v2-header | append-metadata
++  SUPPORTED_DEVICES += tl-wdr5600-v2
++endef
++TARGET_DEVICES += tplink_tl-wdr5600-v2
++
+ define Device/tplink_tl-wdr7500-v3
+   $(Device/tplink-8mlzma)
+   SOC := qca9558
+-- 
+2.35.1
+
